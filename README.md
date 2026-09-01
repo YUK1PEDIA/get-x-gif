@@ -1,23 +1,23 @@
 # get-X-gif
 
-下载 **X（Twitter）博文中的 GIF 图**：传入博文链接，自动解析并下载其中的 GIF。
+下载 **X（Twitter）博文中的 GIF 图**：传入博文链接，自动解析并下载其中的 GIF
 
 X 网页端无法直接右键保存 GIF，官方 API 又要申请 key。本项目通过 X 官方的
 **嵌入（syndication）接口**，无需登录、无需 API key，即可拿到博文 JSON，
-从中提取 `animated_gif` 媒体并下载。
+从中提取 `animated_gif` 媒体并下载
 
 ## 特点
 
 - 支持 `x.com` / `twitter.com`（含 `www`/`m`/`mobile` 前缀、`i/web/status`、
-  `/photo/1`、`/video/1` 后缀、`?s=20` 参数）以及 `t.co` 短链（自动跟随重定向）；
-- syndication 接口失败时自动回退到 fxtwitter 社区接口；
+  `/photo/1`、`/video/1` 后缀、`?s=20` 参数）以及 `t.co` 短链（自动跟随重定向）
+- syndication 接口失败时自动回退到 fxtwitter 社区接口
 
 ## 说明：GIF 其实是 MP4
 
 X 把 GIF 存储为 **MP4 视频**（H.264 编码），因此：
 
-- 默认下载得到的是 `.mp4` 文件——体积小、画质无损，任何播放器都能播放；
-- 想要真正的 `.gif` 文件时加 `--gif`，会用本机 **ffmpeg** 转换（本地需安装 ffmpeg）。
+- 默认下载得到的是 `.mp4` 文件——体积小、画质无损，任何播放器都能播放
+- 想要真正的 `.gif` 文件时加 `--gif`，会用本机 **ffmpeg** 转换（本地需安装 ffmpeg）
 
 安装 ffmpeg：
 
@@ -28,7 +28,7 @@ X 把 GIF 存储为 **MP4 视频**（H.264 编码），因此：
 
 ## 安装
 
-前置要求：Python 3.9+。
+前置要求：Python 3.9+
 
 ### macOS
 
@@ -41,7 +41,7 @@ python3 -m pip install -e .
 
 ### Windows
 
-打开 PowerShell，依次执行：
+在 PowerShell，依次执行：
 
 ```powershell
 cd get_x_gif
@@ -77,7 +77,7 @@ python3 -m pip uninstall get-x-gif   # Windows: py -m pip uninstall get-x-gif
 ```
 
 > 若运行时报证书相关错误，先执行 `python3 -m pip install certifi`
-> （Windows：`py -m pip install certifi`）再重试；也可以给命令加 `--insecure`。
+> （Windows：`py -m pip install certifi`）再重试；也可以给命令加 `--insecure`
 
 ## 使用示例
 
