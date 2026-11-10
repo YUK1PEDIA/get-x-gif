@@ -105,3 +105,59 @@ def convert_mp4_to_gif(
     except subprocess.TimeoutExpired as e:
         raise DownloadError('ffmpeg 转换超时') from e
     return gif_path
+
+
+# 目标体积模式下依次尝试的 (宽度上限, 帧率上限) 阶梯
+_SIZE_LADDER = [
+    (480, 30),
+    (400, 24),
+    (360, 15),
+    (320, 15),
+    (320, 12),
+    (240, 12),
+    (240, 10),
+    (200, 10),
+]
+
+
+def convert_mp4_to_gif_within(
+    mp4_path: str,
+    gif_path: str,
+    max_size_mb: float,
+    max_width: int = 480,
+    fps: int = 30,
+    timeout: float = 300.0,
+) -> tuple[str, int, int, bool]:
+    """按目标体积（MB）自动选择宽度/帧率，尽量不超过目标。
+
+    先按给定的 ``max_width`` / ``fps`` 尝试，超限时沿阶梯逐步降低
+    分辨率与帧率，直到体积达标；全部档位都超标时保留最小档位的产物。
+
+    返回 ``(gif_path, 实际宽度, 实际fps, 是否达标)``。
+    """
+    target = max_size_mb * 1024 * 1024
+    ladder = [(max_width, fps)]
+    for w, f in _SIZE_LADDER:
+        if (w, f) not in ladder:
+            ladder.append((w, f))
+
+    # 临时文件名必须以 .gif 结尾，否则 ffmpeg 无法推断输出格式
+    work = gif_path + '.tmp.gif'
+    try:
+        used_w, used_f = ladder[-1]
+        for w, f in ladder:
+            if os.path.exists(work):
+                os.remove(work)
+            convert_mp4_to_gif(
+                mp4_path, work, max_width=w, fps=f, timeout=timeout
+            )
+            if os.path.getsize(work) <= target:
+                os.replace(work, gif_path)
+                return gif_path, w, f, True
+            used_w, used_f = w, f
+        # 全部档位仍超标：保留最小档位的产物
+        os.replace(work, gif_path)
+        return gif_path, used_w, used_f, False
+    finally:
+        if os.path.exists(work):
+            os.remove(work)

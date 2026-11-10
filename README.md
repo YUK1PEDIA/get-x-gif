@@ -19,6 +19,7 @@ X 的 GIF 本质是 MP4 视频，普通视频同样是 MP4，因此：
 
 - 默认会用本机 **ffmpeg** 把下载的 MP4 转成真正的 `.gif` 文件（需先安装 ffmpeg）
 - 默认按宽度 ≤480px、帧率 ≤30fps 转换以尽量减小体积（小图不放大），可用 `--max-width` / `--fps` 调整，0 表示不限制
+- 想精确控制体积时用 `--max-size MB`（如 `--max-size 5`），超限会自动逐级降低分辨率/帧率，直到不超目标
 - 想保留原始 MP4（体积小、画质无损），加 `--mp4`
 
 安装 ffmpeg：
@@ -93,6 +94,9 @@ get-x-gif "https://x.com/<用户名>/status/<博文ID>" --mp4
 # 调整 GIF 尺寸/帧率（默认宽≤480px、帧率≤30fps；0 表示不限制）
 get-x-gif "https://x.com/<用户名>/status/<博文ID>" --max-width 720 --fps 15
 
+# 按目标体积压缩（超限自动降分辨率/帧率，直到 ≤5MB）
+get-x-gif "https://x.com/<用户名>/status/<博文ID>" --max-size 5
+
 # 指定输出目录
 get-x-gif "https://twitter.com/<用户名>/status/<博文ID>" -o ~/Downloads
 
@@ -113,4 +117,5 @@ get-x-gif "https://x.com/xcowboygeniusx/status/1771987199124214200"
 | `--mp4` | 保存原始 MP4（默认转成 .gif，需要 ffmpeg） |
 | `--max-width W` | GIF 宽度上限，0 表示不限制（默认 480） |
 | `--fps F` | GIF 帧率上限，0 表示保持原始（默认 30） |
+| `--max-size MB` | GIF 目标体积上限，超限自动降低宽度/帧率 |
 | `--insecure` | 跳过 TLS 证书校验 |
