@@ -98,25 +98,11 @@ def main(argv: Optional[list[str]] = None) -> int:
         help='保存原始 MP4（默认转成 .gif，需要 ffmpeg）',
     )
     parser.add_argument(
-        '--max-width',
-        type=int,
-        metavar='W',
-        default=480,
-        help='GIF 宽度上限（像素），0 表示不限制（默认 480）',
-    )
-    parser.add_argument(
-        '--fps',
-        type=int,
-        metavar='F',
-        default=30,
-        help='GIF 帧率上限，0 表示保持原始（默认 30）',
-    )
-    parser.add_argument(
         '--max-size',
         type=float,
         metavar='MB',
-        default=None,
-        help='GIF 目标体积上限（MB），超限时自动降低宽度/帧率（如 5）',
+        default=5.0,
+        help='GIF 目标体积上限（MB，默认 5；0 表示不限制，超限自动降低宽度/帧率）',
     )
     parser.add_argument(
         '--insecure', action='store_true', help='跳过 TLS 证书校验'
@@ -178,39 +164,23 @@ def main(argv: Optional[list[str]] = None) -> int:
             print(f'[{m.index}/{len(info.media)}] 下载 {m.label} {size}({m.source}) {m.url}')
             download_file(m.url, tmp_mp4, insecure=args.insecure)
             if to_gif:
-                if args.max_size:
+                if args.max_size > 0:
                     print(
                         f'    转换为 .gif（目标 ≤{args.max_size} MB，'
                         '自动调整尺寸/帧率）...'
                     )
-                    _, used_w, used_f, ok = convert_mp4_to_gif_within(
-                        tmp_mp4,
-                        final,
-                        max_size_mb=args.max_size,
-                        max_width=args.max_width,
-                        fps=args.fps,
-                    )
-                    print(f'    -> 采用 {used_w}px / {used_f}fps')
-                    if not ok:
-                        print(
-                            f'    警告：最小参数下仍超过 {args.max_size} MB',
-                            file=sys.stderr,
-                        )
                 else:
-                    width_desc = (
-                        f'宽≤{args.max_width}px'
-                        if args.max_width > 0
-                        else '原始宽度'
-                    )
-                    fps_desc = (
-                        f'fps≤{args.fps}' if args.fps > 0 else '原始帧率'
-                    )
-                    print(f'    转换为 .gif（{width_desc}，{fps_desc}）...')
-                    convert_mp4_to_gif(
-                        tmp_mp4,
-                        final,
-                        max_width=args.max_width,
-                        fps=args.fps,
+                    print('    转换为 .gif（不限制体积）...')
+                _, used_w, used_f, ok = convert_mp4_to_gif_within(
+                    tmp_mp4,
+                    final,
+                    max_size_mb=args.max_size,
+                )
+                print(f'    -> 采用 {used_w}px / {used_f}fps')
+                if not ok:
+                    print(
+                        f'    警告：最小参数下仍超过 {args.max_size} MB',
+                        file=sys.stderr,
                     )
                 os.remove(tmp_mp4)
             size_mb = os.path.getsize(final) / 1048576

@@ -124,28 +124,26 @@ def convert_mp4_to_gif_within(
     mp4_path: str,
     gif_path: str,
     max_size_mb: float,
-    max_width: int = 480,
-    fps: int = 30,
     timeout: float = 300.0,
 ) -> tuple[str, int, int, bool]:
     """按目标体积（MB）自动选择宽度/帧率，尽量不超过目标。
 
-    先按给定的 ``max_width`` / ``fps`` 尝试，超限时沿阶梯逐步降低
-    分辨率与帧率，直到体积达标；全部档位都超标时保留最小档位的产物。
+    ``max_size_mb <= 0`` 表示不限制体积（按最佳画质 480px/30fps 转换）。
+    先按最佳画质尝试，超限时沿阶梯逐步降低分辨率与帧率，直到体积达标；
+    全部档位都超标时保留最小档位的产物。
 
     返回 ``(gif_path, 实际宽度, 实际fps, 是否达标)``。
     """
-    target = max_size_mb * 1024 * 1024
-    ladder = [(max_width, fps)]
-    for w, f in _SIZE_LADDER:
-        if (w, f) not in ladder:
-            ladder.append((w, f))
+    if max_size_mb <= 0:
+        convert_mp4_to_gif(mp4_path, gif_path, max_width=480, fps=30, timeout=timeout)
+        return gif_path, 480, 30, True
 
+    target = max_size_mb * 1024 * 1024
     # 临时文件名必须以 .gif 结尾，否则 ffmpeg 无法推断输出格式
     work = gif_path + '.tmp.gif'
     try:
-        used_w, used_f = ladder[-1]
-        for w, f in ladder:
+        used_w, used_f = _SIZE_LADDER[-1]
+        for w, f in _SIZE_LADDER:
             if os.path.exists(work):
                 os.remove(work)
             convert_mp4_to_gif(
