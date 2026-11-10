@@ -1,3 +1,5 @@
+"""命令行入口：get-x-gif <博文链接>"""
+
 from __future__ import annotations
 
 import argparse
@@ -6,7 +8,7 @@ import sys
 from typing import Optional
 
 from . import __version__
-from .core import GifMedia, TweetError, extract_tweet_id, get_tweet_gifs
+from .core import Media, TweetError, extract_tweet_id, get_tweet_media
 from .download import (
     DownloadError,
     convert_mp4_to_gif,
@@ -28,27 +30,27 @@ def _default_basename(
 
 
 def _default_output_dir() -> str:
-    """默认输出目录：项目根目录下的 output/"""
+    """默认输出目录：项目根目录下的 output/。"""
     package_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(package_dir)
     return os.path.join(project_root, 'output')
 
 
 def _plan_outputs(
-    gif: GifMedia,
+    media: Media,
     out: Optional[str],
     screen_name: Optional[str],
     total: int,
     to_gif: bool,
 ) -> tuple[str, str]:
-    """返回 (最终文件路径, 临时 MP4 路径)。最终文件为 .gif 时临时 MP4 需转换后删除"""
+    """返回 (最终文件路径, 临时 MP4 路径)。最终文件为 .gif 时临时 MP4 需转换后删除。"""
     ext = 'gif' if to_gif else 'mp4'
     single = total == 1
-    base = _default_basename(gif.tweet_id, screen_name, gif.index, total, ext)
+    base = _default_basename(media.tweet_id, screen_name, media.index, total, ext)
 
     if out:
         if single and not os.path.isdir(out) and not out.endswith(os.sep):
-            # 单个 GIF 且 -o 指向一个不存在的路径：视为文件路径
+            # 单个媒体且 -o 指向一个不存在的路径：视为文件路径
             final = out if os.path.splitext(out)[1] else out + '.' + ext
         else:
             os.makedirs(out, exist_ok=True)
@@ -65,14 +67,14 @@ def _plan_outputs(
 def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         prog='get-x-gif',
-        description='下载 X 博文中的 GIF 图。',
+        description='下载 X（Twitter）博文中的 GIF 图（普通视频自动转成 GIF）。',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             '示例：\n'
             '  get-x-gif "https://x.com/user/status/1234567890123456789"\n'
             '  get-x-gif "https://twitter.com/user/status/1234567890123456789" '
             '-o ~/Downloads\n'
-            '  get-x-gif "https://x.com/user/status/1234567890123456789" --gif\n'
+            '  get-x-gif "https://x.com/user/status/1234567890123456789" --mp4\n'
         ),
     )
     parser.add_argument('url', help='X 博文链接（x.com / twitter.com / t.co）')
@@ -83,12 +85,16 @@ def main(argv: Optional[list[str]] = None) -> int:
         help='输出文件或目录（默认项目根目录下的 output/）',
     )
     parser.add_argument(
-        '-n', '--index', type=int, metavar='N', help='只下载第 N 个 GIF（从 1 起）'
+        '-n',
+        '--index',
+        type=int,
+        metavar='N',
+        help='只下载第 N 个 GIF/视频（从 1 起）',
     )
     parser.add_argument(
-        '--gif',
+        '--mp4',
         action='store_true',
-        help='用 ffmpeg 转成真正的 .gif（默认保存 MP4，X 的 GIF 本身就是 MP4）',
+        help='保存原始 MP4（默认转成 .gif，需要 ffmpeg）',
     )
     parser.add_argument(
         '--insecure', action='store_true', help='跳过 TLS 证书校验'
@@ -98,11 +104,13 @@ def main(argv: Optional[list[str]] = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    # 默认输出到项目根目录下的 output/
+    # 默认输出到项目根目录下的 output/（自动创建）
     out = args.output
     if out is None:
         out = _default_output_dir()
         os.makedirs(out, exist_ok=True)
+
+    to_gif = not args.mp4
 
     try:
         tweet_id = extract_tweet_id(args.url)
@@ -111,52 +119,52 @@ def main(argv: Optional[list[str]] = None) -> int:
             return 2
 
         print(f'解析到博文 ID：{tweet_id}')
-        info = get_tweet_gifs(tweet_id, insecure=args.insecure)
+        info = get_tweet_media(tweet_id, insecure=args.insecure)
 
-        if not info.gifs:
-            print('该博文没有 GIF 图。', file=sys.stderr)
+        if not info.media:
+            print('该博文没有可下载的 GIF/视频。', file=sys.stderr)
             return 1
 
         if args.index is not None:
-            if args.index < 1 or args.index > len(info.gifs):
+            if args.index < 1 or args.index > len(info.media):
                 print(
-                    f'错误：--index {args.index} 超出范围（该博文共 {len(info.gifs)} 个 GIF）',
+                    f'错误：--index {args.index} 超出范围'
+                    f'（该博文共 {len(info.media)} 个可下载媒体）',
                     file=sys.stderr,
                 )
                 return 2
-            selected = [info.gifs[args.index - 1]]
+            selected = [info.media[args.index - 1]]
         else:
-            selected = info.gifs
+            selected = info.media
 
-        if args.gif and not ffmpeg_available():
+        if to_gif and not ffmpeg_available():
             print(
-                '错误：未找到 ffmpeg，无法转换为 .gif。'
-                '请先安装 ffmpeg（macOS: brew install ffmpeg），'
-                '或去掉 --gif 直接保存 MP4。',
+                '错误：未找到 ffmpeg，默认输出 .gif 需要 ffmpeg。'
+                '请先安装（macOS: brew install ffmpeg，'
+                'Windows: winget install Gyan.FFmpeg），'
+                '或加 --mp4 直接保存 MP4。',
                 file=sys.stderr,
             )
             return 2
 
         results = []
-        for g in selected:
+        for m in selected:
             final, tmp_mp4 = _plan_outputs(
-                g, out, info.screen_name, len(info.gifs), args.gif
+                m, out, info.screen_name, len(info.media), to_gif
             )
-            size = f'{g.width}x{g.height} ' if g.width and g.height else ''
-            print(f'[{g.index}/{len(info.gifs)}] 下载 GIF {size}({g.source}) {g.url}')
-            download_file(g.url, tmp_mp4, insecure=args.insecure)
-            if args.gif:
+            size = f'{m.width}x{m.height} ' if m.width and m.height else ''
+            print(f'[{m.index}/{len(info.media)}] 下载 {m.label} {size}({m.source}) {m.url}')
+            download_file(m.url, tmp_mp4, insecure=args.insecure)
+            if to_gif:
                 print('    转换为 .gif ...')
                 convert_mp4_to_gif(tmp_mp4, final)
                 os.remove(tmp_mp4)
-            else:
-                final = tmp_mp4
             size_mb = os.path.getsize(final) / 1048576
             print(f'    -> 已保存 {final} ({size_mb:.1f} MB)')
             results.append(final)
 
         if len(results) > 1:
-            print(f'共下载 {len(results)} 个 GIF。')
+            print(f'共下载 {len(results)} 个媒体。')
         return 0
 
     except TweetError as e:
