@@ -18,6 +18,7 @@ X 网页端无法直接右键保存 GIF，官方 API 又要申请 key。本项�
 X 的 GIF 本质是 MP4 视频，普通视频同样是 MP4，因此：
 
 - 默认会用本机 **ffmpeg** 把下载的 MP4 转成真正的 `.gif` 文件（需先安装 ffmpeg）
+- 默认以 ≤5MB 为目标转换（先按最佳画质 480px/30fps 尝试，超限时自动逐级降低分辨率/帧率），可用 `--max-size MB` 调整，0 表示不限制
 - 想保留原始 MP4（体积小、画质无损），加 `--mp4`
 
 安装 ffmpeg：
@@ -89,6 +90,9 @@ get-x-gif "https://x.com/<用户名>/status/<博文ID>"
 # 保留原始 MP4（不转 GIF）
 get-x-gif "https://x.com/<用户名>/status/<博文ID>" --mp4
 
+# 按目标体积压缩（默认 ≤5MB，超限自动降分辨率/帧率；0 表示不限制）
+get-x-gif "https://x.com/<用户名>/status/<博文ID>" --max-size 10
+
 # 指定输出目录
 get-x-gif "https://twitter.com/<用户名>/status/<博文ID>" -o ~/Downloads
 
@@ -107,4 +111,5 @@ get-x-gif "https://x.com/xcowboygeniusx/status/1771987199124214200"
 | `-o, --output PATH` | 输出文件或目录（默认项目根目录下的 `output/`，自动创建） |
 | `-n, --index N` | 只下载第 N 个 GIF/视频（从 1 起） |
 | `--mp4` | 保存原始 MP4（默认转成 .gif，需要 ffmpeg） |
+| `--max-size MB` | GIF 目标体积上限（默认 5，0 表示不限制，超限自动降低宽度/帧率） |
 | `--insecure` | 跳过 TLS 证书校验 |
