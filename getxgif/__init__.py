@@ -3,7 +3,7 @@
 from .core import Media, TweetError, TweetInfo, extract_tweet_id, get_tweet_media
 from .download import convert_mp4_to_gif, download_file, ffmpeg_available
 
-__version__ = '0.2.0'
+__version__ = '0.3.0'
 
 __all__ = [
     'Media',

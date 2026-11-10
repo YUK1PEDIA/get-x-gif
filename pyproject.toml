@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "get-x-gif"
-version = "0.2.0"
+version = "0.3.0"
 description = "下载 X（Twitter）博文中的 GIF 图：传入博文链接，下载其中的 GIF"
 readme = "README.md"
 requires-python = ">=3.9"

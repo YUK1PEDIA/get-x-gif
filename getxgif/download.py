@@ -60,12 +60,30 @@ def download_file(
                 pass
 
 
-def convert_mp4_to_gif(mp4_path: str, gif_path: str, timeout: float = 300.0) -> str:
+def convert_mp4_to_gif(
+    mp4_path: str,
+    gif_path: str,
+    max_width: int = 480,
+    fps: int = 30,
+    timeout: float = 300.0,
+) -> str:
+    """用 ffmpeg 两遍调色板（palettegen/paletteuse）把 MP4 转成真正的 .gif。
+
+    - ``max_width``：宽度上限（像素），0 表示不缩放；小于该值的图不会被放大
+    - ``fps``：帧率上限，0 表示保持原始帧率
+    """
     if not ffmpeg_available():
         raise DownloadError(
             '未找到 ffmpeg，无法转换为 .gif。请先安装（macOS: brew install ffmpeg），'
-            '或去掉 --gif 直接保存 MP4。'
+            '或加 --mp4 直接保存 MP4。'
         )
+    filters = []
+    if max_width and max_width > 0:
+        filters.append(f"scale=w='min({max_width},iw)':h=-1:flags=lanczos")
+    if fps and fps > 0:
+        filters.append(f'fps={fps}')
+    vf = ','.join(filters) + ',' if filters else ''
+    vf += 'split[a][b];[a]palettegen[p];[b][p]paletteuse'
     cmd = [
         'ffmpeg',
         '-hide_banner',
@@ -75,7 +93,7 @@ def convert_mp4_to_gif(mp4_path: str, gif_path: str, timeout: float = 300.0) -> 
         '-i',
         mp4_path,
         '-filter_complex',
-        '[0:v]split[a][b];[a]palettegen[p];[b][p]paletteuse',
+        f'[0:v]{vf}',
         gif_path,
     ]
     try:

@@ -97,6 +97,20 @@ def main(argv: Optional[list[str]] = None) -> int:
         help='保存原始 MP4（默认转成 .gif，需要 ffmpeg）',
     )
     parser.add_argument(
+        '--max-width',
+        type=int,
+        metavar='W',
+        default=480,
+        help='GIF 宽度上限（像素），0 表示不限制（默认 480）',
+    )
+    parser.add_argument(
+        '--fps',
+        type=int,
+        metavar='F',
+        default=30,
+        help='GIF 帧率上限，0 表示保持原始（默认 30）',
+    )
+    parser.add_argument(
         '--insecure', action='store_true', help='跳过 TLS 证书校验'
     )
     parser.add_argument(
@@ -156,8 +170,19 @@ def main(argv: Optional[list[str]] = None) -> int:
             print(f'[{m.index}/{len(info.media)}] 下载 {m.label} {size}({m.source}) {m.url}')
             download_file(m.url, tmp_mp4, insecure=args.insecure)
             if to_gif:
-                print('    转换为 .gif ...')
-                convert_mp4_to_gif(tmp_mp4, final)
+                width_desc = (
+                    f'宽≤{args.max_width}px'
+                    if args.max_width > 0
+                    else '原始宽度'
+                )
+                fps_desc = f'fps≤{args.fps}' if args.fps > 0 else '原始帧率'
+                print(f'    转换为 .gif（{width_desc}，{fps_desc}）...')
+                convert_mp4_to_gif(
+                    tmp_mp4,
+                    final,
+                    max_width=args.max_width,
+                    fps=args.fps,
+                )
                 os.remove(tmp_mp4)
             size_mb = os.path.getsize(final) / 1048576
             print(f'    -> 已保存 {final} ({size_mb:.1f} MB)')
